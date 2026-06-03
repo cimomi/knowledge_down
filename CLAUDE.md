@@ -65,3 +65,9 @@ frontmatter 用最朴素的 YAML：字符串不加引号，列表写 `[a, b]`。
 ## 关联与去重
 
 写新条目前先 `grep` 标题/关键词查重；疑似重复就问用户合并还是新建。相关条目在正文用 `[[条目id]]` 互链。
+
+## 可选配套 skill（若已在环境中安装则优先使用）
+
+- **article-extractor**：处理"链接"类素材时，优先用它抽取干净全文（去广告/导航），再据此精进；优于只取摘要。无 reader/trafilatura 时它有零依赖兜底。
+- **youtube-transcript**：素材是 YouTube 视频链接时，用它取字幕全文（需 `yt-dlp`）。
+- 未安装这些 skill 时，退回内置 WebFetch/WebSearch 即可，流程不变。
