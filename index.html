@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人知识库</title>
+<style>
+  :root{
+    --paper:#f6f3ec; --card:#fffdf8; --ink:#1c1a17; --muted:#7a7468;
+    --line:#e3dccd; --line-strong:#cdc4b2; --accent:#9c3d2f; --accent-soft:#f0e3df;
+    --sans:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --serif:"Songti SC","Source Han Serif SC","Noto Serif CJK SC",Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.7;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+
+  /* ── Header ─────────────────────────────── */
+  header{padding:64px 0 28px;border-bottom:1px solid var(--line-strong)}
+  .kicker{font-family:var(--sans);font-size:12px;letter-spacing:.32em;color:var(--muted);
+    text-transform:uppercase;margin-bottom:14px}
+  h1.title{font-family:var(--sans);font-weight:700;font-size:40px;letter-spacing:-.01em;
+    margin:0 0 10px;line-height:1.15}
+  .subtitle{font-size:17px;color:var(--muted);margin:0;max-width:60ch}
+  .count{font-family:var(--sans);font-size:13px;color:var(--muted);margin-top:18px}
+  .count b{color:var(--accent);font-weight:600}
+
+  .search{margin-top:22px;position:relative}
+  .search input{width:100%;font-family:var(--serif);font-size:17px;color:var(--ink);
+    background:var(--card);border:1px solid var(--line-strong);border-radius:2px;
+    padding:14px 16px 14px 42px;outline:none;transition:border-color .15s}
+  .search input:focus{border-color:var(--accent)}
+  .search input::placeholder{color:#b3ab9c}
+  .search .glyph{position:absolute;left:15px;top:50%;transform:translateY(-50%);
+    color:var(--muted);font-size:16px;pointer-events:none}
+
+  /* ── Toolbar (filters) ──────────────────── */
+  .toolbar{position:sticky;top:0;z-index:10;background:rgba(246,243,236,.94);
+    backdrop-filter:saturate(120%) blur(6px);border-bottom:1px solid var(--line);
+    padding:14px 0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .chip{font-family:var(--sans);font-size:13px;color:var(--ink);background:transparent;
+    border:1px solid var(--line-strong);border-radius:999px;padding:5px 14px;cursor:pointer;
+    transition:all .12s;white-space:nowrap}
+  .chip:hover{border-color:var(--accent)}
+  .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chip .n{opacity:.55;margin-left:5px;font-size:11px}
+  .tagbar{margin-top:10px;display:none;flex-wrap:wrap;gap:6px}
+  .tagbar.show{display:flex}
+  .tag-f{font-family:var(--sans);font-size:12px;color:var(--muted);background:transparent;
+    border:1px dashed var(--line-strong);border-radius:3px;padding:3px 9px;cursor:pointer}
+  .tag-f.on{color:var(--accent);border-color:var(--accent);border-style:solid}
+  .toggle-tags{font-family:var(--sans);font-size:12px;color:var(--muted);background:none;
+    border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;margin-left:4px}
+
+  /* ── Cards ──────────────────────────────── */
+  main{padding:30px 0 80px;min-height:40vh}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:3px;padding:22px 22px 20px;
+    cursor:pointer;transition:border-color .15s,transform .15s;display:flex;flex-direction:column;min-height:150px}
+  .card:hover{border-color:var(--line-strong);transform:translateY(-2px)}
+  .card .meta{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:11px;
+    color:var(--muted);margin-bottom:12px}
+  .badge{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--accent);
+    background:var(--accent-soft);border-radius:2px;padding:2px 8px;letter-spacing:.02em}
+  .card h3{font-family:var(--sans);font-weight:600;font-size:18px;line-height:1.35;margin:0 0 8px;
+    text-wrap:pretty}
+  .card .sum{font-size:15px;color:#4a463e;margin:0;flex:1;text-wrap:pretty}
+  .card .tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
+  .card .tags span{font-family:var(--sans);font-size:11px;color:var(--muted)}
+  .card .tags span::before{content:"#";opacity:.5}
+
+  .empty{text-align:center;padding:80px 20px;color:var(--muted)}
+  .empty .big{font-family:var(--sans);font-size:20px;color:var(--ink);margin-bottom:8px}
+
+  /* ── Modal ──────────────────────────────── */
+  .overlay{position:fixed;inset:0;background:rgba(28,26,23,.42);display:none;z-index:50;
+    align-items:flex-start;justify-content:center;padding:48px 20px;overflow-y:auto}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);max-width:720px;width:100%;border-radius:4px;
+    border:1px solid var(--line-strong);box-shadow:0 24px 60px -24px rgba(28,26,23,.4);
+    padding:40px 46px 46px;animation:rise .18s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .modal .m-meta{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:12px;
+    color:var(--muted);margin-bottom:14px}
+  .modal h2{font-family:var(--sans);font-weight:700;font-size:27px;line-height:1.2;margin:0 0 20px;
+    letter-spacing:-.01em}
+  .close{position:sticky;top:0;float:right;font-family:var(--sans);font-size:22px;line-height:1;
+    color:var(--muted);background:none;border:none;cursor:pointer;padding:4px}
+  .close:hover{color:var(--accent)}
+  .src{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-family:var(--sans);
+    font-size:13px;color:var(--muted);word-break:break-all}
+  .src a{color:var(--accent)}
+  .mtags{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .mtags span{font-family:var(--sans);font-size:12px;color:var(--muted)}
+  .mtags span::before{content:"#";opacity:.5}
+
+  /* rendered markdown */
+  .body{font-size:16.5px;line-height:1.82;color:#2a2722}
+  .body h2,.body h3,.body h4,.body h5{font-family:var(--sans);font-weight:600;line-height:1.35;
+    margin:1.6em 0 .5em}
+  .body h2{font-size:19px} .body h3{font-size:17px} .body h4{font-size:15px;color:var(--muted)}
+  .body p{margin:.7em 0}
+  .body ul,.body ol{margin:.6em 0;padding-left:1.4em}
+  .body li{margin:.25em 0}
+  .body blockquote{margin:1em 0;padding:4px 18px;border-left:3px solid var(--accent);
+    color:var(--muted);font-style:italic}
+  .body code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em;
+    background:#efe9dc;border-radius:2px;padding:1px 5px}
+  .body pre{background:#2a2722;color:#f0ece3;border-radius:3px;padding:16px 18px;overflow-x:auto;margin:1em 0}
+  .body pre code{background:none;padding:0;color:inherit;font-size:13.5px}
+  .body a{color:var(--accent);text-underline-offset:2px}
+  .body img{max-width:100%;height:auto;border-radius:3px;border:1px solid var(--line);margin:.6em 0}
+  .body hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+  .wikilink{font-family:var(--sans);font-size:.9em;color:var(--accent);background:var(--accent-soft);
+    border-radius:2px;padding:1px 5px}
+
+  footer{border-top:1px solid var(--line);padding:24px 0 40px;font-family:var(--sans);
+    font-size:12px;color:#a89f8e;text-align:center}
+
+  @media(max-width:600px){
+    header{padding:40px 0 22px} h1.title{font-size:30px}
+    .modal{padding:30px 24px 34px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">Personal Knowledge Base</div>
+    <h1 class="title">个人知识库</h1>
+    <p class="subtitle">把零散的金句、截图、文档与链接，沉淀为可检索、可回访的一座私人书库。</p>
+    <div class="count">共收录 <b id="total">0</b> 条 · <span id="gen"></span></div>
+    <div class="search">
+      <span class="glyph">⌕</span>
+      <input id="q" type="search" placeholder="搜索标题、内容、标签…" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <div class="chips" id="typeChips"></div>
+    <div class="tagbar" id="tagBar"></div>
+  </div>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none"></div>
+  </div>
+</main>
+
+<footer><div class="wrap">由 knowledge-base-builder 自动生成 · 内容随对话持续沉淀</div></footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <button class="close" id="closeBtn" aria-label="关闭">✕</button>
+    <div class="m-meta" id="mMeta"></div>
+    <h2 id="mTitle"></h2>
+    <div class="mtags" id="mTags"></div>
+    <div class="body" id="mBody"></div>
+    <div class="src" id="mSrc"></div>
+  </div>
+</div>
+
+<script type="application/json" id="kb-data">{"generated": "2026-06-02T17:52:15", "count": 0, "types": [], "tags": [], "entries": []}</script>
+<script>
+"use strict";
+// ── 读取数据（模板未经构建时安全降级为空库）────────────
+var DATA = {count:0,entries:[],types:[],tags:[],generated:""};
+try { DATA = JSON.parse(document.getElementById('kb-data').textContent); } catch(e){}
+var entries = DATA.entries || [];
+
+// ── 状态 ──────────────────────────────────
+var state = { q:"", type:"全部", tags:new Set() };
+
+// ── 极简 Markdown 渲染器（离线、纯原生）─────
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fixSrc(s){return s.replace(/^\.\.\//,'');}              // entries/ 内的 ../assets 修正为根相对
+function inline(s){
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(m,a,u){return '<img alt="'+a+'" src="'+fixSrc(u)+'">';});
+  s = s.replace(/\[\[([^\]]+)\]\]/g, function(m,id){return '<span class="wikilink">'+id+'</span>';});
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m,t,u){return '<a href="'+u+'" target="_blank" rel="noopener">'+t+'</a>';});
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return s;
+}
+function md(src){
+  if(!src) return '';
+  var L = esc(src).split('\n'), out='', i=0;
+  function isBlock(x){return /^(#{1,5}\s|>|\s*[-*]\s|\s*\d+\.\s|```)/.test(x);}
+  while(i<L.length){
+    var line=L[i];
+    if(/^```/.test(line)){var c='';i++;while(i<L.length&&!/^```/.test(L[i])){c+=L[i]+'\n';i++;}i++;out+='<pre><code>'+c+'</code></pre>';continue;}
+    var h=line.match(/^(#{1,5})\s+(.*)$/);
+    if(h){var lv=Math.min(h[1].length+1,5);out+='<h'+lv+'>'+inline(h[2])+'</h'+lv+'>';i++;continue;}
+    if(/^>\s?/.test(line)){var q='';while(i<L.length&&/^>\s?/.test(L[i])){q+=L[i].replace(/^>\s?/,'')+' ';i++;}out+='<blockquote>'+inline(q.trim())+'</blockquote>';continue;}
+    if(/^(-{3,}|\*{3,})\s*$/.test(line)){out+='<hr>';i++;continue;}
+    if(/^\s*[-*]\s+/.test(line)){var u='';while(i<L.length&&/^\s*[-*]\s+/.test(L[i])){u+='<li>'+inline(L[i].replace(/^\s*[-*]\s+/,''))+'</li>';i++;}out+='<ul>'+u+'</ul>';continue;}
+    if(/^\s*\d+\.\s+/.test(line)){var o='';while(i<L.length&&/^\s*\d+\.\s+/.test(L[i])){o+='<li>'+inline(L[i].replace(/^\s*\d+\.\s+/,''))+'</li>';i++;}out+='<ol>'+o+'</ol>';continue;}
+    if(line.trim()===''){i++;continue;}
+    var p=line;i++;while(i<L.length&&L[i].trim()!==''&&!isBlock(L[i])){p+=' '+L[i];i++;}
+    out+='<p>'+inline(p)+'</p>';
+  }
+  return out;
+}
+
+// ── 过滤 ──────────────────────────────────
+function matches(e){
+  if(state.type!=="全部" && e.type!==state.type) return false;
+  if(state.tags.size){ for(var t of state.tags){ if((e.tags||[]).indexOf(t)<0) return false; } }
+  if(state.q){
+    var hay=((e.title||"")+" "+(e.summary||"")+" "+(e.tags||[]).join(" ")+" "+(e.body||"")).toLowerCase();
+    var terms=state.q.toLowerCase().split(/\s+/).filter(Boolean);
+    for(var k=0;k<terms.length;k++){ if(hay.indexOf(terms[k])<0) return false; }
+  }
+  return true;
+}
+
+// ── 渲染 ──────────────────────────────────
+function el(tag,cls,html){var n=document.createElement(tag);if(cls)n.className=cls;if(html!=null)n.innerHTML=html;return n;}
+
+function renderChips(){
+  var box=document.getElementById('typeChips'); box.innerHTML='';
+  var types=['全部'].concat(DATA.types||[]);
+  types.forEach(function(t){
+    var n = t==='全部' ? entries.length : entries.filter(function(e){return e.type===t;}).length;
+    var c=el('button','chip'+(state.type===t?' on':''), t+'<span class="n">'+n+'</span>');
+    c.onclick=function(){state.type=t;renderChips();render();};
+    box.appendChild(c);
+  });
+  if((DATA.tags||[]).length){
+    var tog=el('button','toggle-tags', (document.getElementById('tagBar').classList.contains('show')?'收起标签':'按标签筛选'));
+    tog.onclick=function(){var tb=document.getElementById('tagBar');tb.classList.toggle('show');renderChips();};
+    box.appendChild(tog);
+  }
+}
+function renderTags(){
+  var box=document.getElementById('tagBar'); box.innerHTML='';
+  (DATA.tags||[]).forEach(function(t){
+    var c=el('button','tag-f'+(state.tags.has(t)?' on':''), t);
+    c.onclick=function(){state.tags.has(t)?state.tags.delete(t):state.tags.add(t);renderTags();render();};
+    box.appendChild(c);
+  });
+}
+function render(){
+  var grid=document.getElementById('grid'), empty=document.getElementById('empty');
+  var list=entries.filter(matches);
+  grid.innerHTML='';
+  if(!entries.length){
+    grid.style.display='none';empty.style.display='block';
+    empty.innerHTML='<div class="big">知识库还是空的</div><div>在对话里发我第一条金句 / 截图 / 文档 / 链接，我会整理后收进来。</div>';
+    return;
+  }
+  if(!list.length){
+    grid.style.display='none';empty.style.display='block';
+    empty.innerHTML='<div class="big">没有匹配的条目</div><div>换个关键词，或清除筛选条件试试。</div>';
+    return;
+  }
+  empty.style.display='none';grid.style.display='grid';
+  list.forEach(function(e){
+    var card=el('div','card');
+    card.innerHTML='<div class="meta"><span class="badge">'+(e.type||'未分类')+'</span><span>'+(e.date||'')+'</span></div>'+
+      '<h3>'+esc(e.title||'')+'</h3>'+
+      '<p class="sum">'+esc(e.summary||'')+'</p>'+
+      ((e.tags&&e.tags.length)?'<div class="tags">'+e.tags.map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>':'');
+    card.onclick=function(){openModal(e);};
+    grid.appendChild(card);
+  });
+}
+
+// ── 模态 ──────────────────────────────────
+function openModal(e){
+  document.getElementById('mMeta').innerHTML='<span class="badge">'+(e.type||'未分类')+'</span><span>'+(e.date||'')+'</span>';
+  document.getElementById('mTitle').textContent=e.title||'';
+  document.getElementById('mTags').innerHTML=(e.tags&&e.tags.length)?e.tags.map(function(t){return '<span>'+esc(t)+'</span>';}).join(''):'';
+  document.getElementById('mBody').innerHTML=md(e.body||'');
+  var src=document.getElementById('mSrc');
+  var bits=[];
+  if(e.source) bits.push(/^https?:\/\//.test(e.source)?'出处：<a href="'+e.source+'" target="_blank" rel="noopener">'+e.source+'</a>':'出处：'+esc(e.source));
+  if(e.file) bits.push('原文：<a href="'+e.file+'" target="_blank" rel="noopener">'+e.file+'</a>');
+  src.innerHTML=bits.join(' &nbsp;·&nbsp; ');
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('modal').scrollTop=0;
+}
+function closeModal(){document.getElementById('overlay').classList.remove('show');}
+document.getElementById('closeBtn').onclick=closeModal;
+document.getElementById('overlay').onclick=function(ev){if(ev.target===this)closeModal();};
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeModal();});
+document.getElementById('q').addEventListener('input',function(){state.q=this.value;render();});
+
+// ── 初始化 ────────────────────────────────
+document.getElementById('total').textContent=DATA.count||entries.length||0;
+document.getElementById('gen').textContent=DATA.generated?('更新于 '+DATA.generated.replace('T',' ')):'';
+renderChips();renderTags();render();
+</script>
+</body>
+</html>
